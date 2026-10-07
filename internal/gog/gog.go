@@ -9,8 +9,11 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -41,26 +44,58 @@ type Client struct {
 	Log     io.Writer // retry notices
 }
 
-// Locate finds gog and checks its version.
-// ponytail: system PATH only; a bundled-binary fallback belongs here later.
-func Locate(ctx context.Context) (string, error) {
-	path, err := exec.LookPath("gog")
+// exeDir returns the directory of the running binary, where release archives
+// put the bundled gog. Tests override it.
+var exeDir = func() string {
+	exe, err := os.Executable()
 	if err != nil {
-		return "", errors.New("gog not found on PATH; install it from https://github.com/openclaw/gogcli")
+		return ""
 	}
-	out, err := exec.CommandContext(ctx, path, "--version").Output() // #nosec G204 -- path comes from LookPath
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = real
+	}
+	return filepath.Dir(exe)
+}
+
+// Locate finds a gog that is at least MinVersion: the one on PATH if new
+// enough, else the gog bundled next to this executable. Notices go to log.
+func Locate(ctx context.Context, log io.Writer) (string, error) {
+	if path, err := exec.LookPath("gog"); err == nil {
+		err := checkVersion(ctx, path)
+		if err == nil {
+			return path, nil
+		}
+		fmt.Fprintf(log, "%v; trying the bundled gog\n", err)
+	}
+	name := "gog"
+	if runtime.GOOS == "windows" {
+		name = "gog.exe"
+	}
+	if dir := exeDir(); dir != "" {
+		bundled := filepath.Join(dir, name)
+		if _, err := os.Stat(bundled); err == nil {
+			return bundled, checkVersion(ctx, bundled)
+		}
+	}
+	return "", fmt.Errorf("gog %d.%d.%d or newer not found on PATH or next to gemini-notes-export; "+
+		"install it from https://github.com/openclaw/gogcli/releases or reinstall gemini-notes-export from a release archive, which bundles gog",
+		MinVersion[0], MinVersion[1], MinVersion[2])
+}
+
+func checkVersion(ctx context.Context, path string) error {
+	out, err := exec.CommandContext(ctx, path, "--version").Output() // #nosec G204 -- path is a located gog binary
 	if err != nil {
-		return "", fmt.Errorf("running %s --version: %w", path, err)
+		return fmt.Errorf("running %s --version: %w", path, err)
 	}
 	v, err := ParseVersion(string(out))
 	if err != nil {
-		return "", err
+		return err
 	}
 	if !AtLeast(v, MinVersion) {
-		return "", fmt.Errorf("gog %d.%d.%d at %s is too old; need >= %d.%d.%d",
+		return fmt.Errorf("gog %d.%d.%d at %s is too old; need >= %d.%d.%d",
 			v[0], v[1], v[2], path, MinVersion[0], MinVersion[1], MinVersion[2])
 	}
-	return path, nil
+	return nil
 }
 
 var versionRe = regexp.MustCompile(`v?(\d+)\.(\d+)\.(\d+)`)

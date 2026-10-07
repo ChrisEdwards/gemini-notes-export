@@ -66,7 +66,7 @@ func Run(ctx context.Context, opts Options, stdout, stderr io.Writer) error {
 		start = cursor.Add(-overlap)
 	}
 
-	gogPath, err := gog.Locate(ctx)
+	gogPath, err := gog.Locate(ctx, stderr)
 	if err != nil {
 		return err
 	}
