@@ -46,7 +46,7 @@ The team planned widgets \(round ones\) for Q4\. Cost is 5\+ units\!
 
 ### **Details**
 
-**Widget Planning \- Overview**: Alice Example opened with widgets ([00:01:04](#00:01:04)). Keep \*stars\* and \_underscores\_ escaped.
+**Widget Planning \- Overview**: Alice Example opened with widgets ([00:01:04](#00:01:04)). Keep \*stars\* and \_underscores\_ escaped. Run \`make\` for \$5 \& up.
 
   ![][image1]
 

@@ -69,9 +69,10 @@ func TestTransformRules(t *testing.T) {
 		"- [ ] [The group] Review #widgets channel: Read it ~weekly.",
 		"via the widget tracker.",
 		"widgets (round ones) for Q4. Cost is 5+ units!",
-		`Keep \*stars\* and \_underscores\_ escaped.`,
+		`Keep \*stars\* and \_underscores\_ escaped. Run ` + "`make`" + ` for $5 & up.`,
+		"**Widget Planning**\n\nThe team planned",
 		"opened with widgets (00:01:04).",
-		"gadgets  and > quoted things.",
+		"gadgets and > quoted things.",
 		"## Widget Guild - Transcript\n\n### 00:01:04\n\n**Alice Example:** Hello everyone.\n\n**Bob",
 		"### Transcription ended after 00:05:00\n",
 	} {

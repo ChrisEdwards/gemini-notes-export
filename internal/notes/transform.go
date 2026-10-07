@@ -18,11 +18,12 @@ type Result struct {
 var (
 	headingRe   = regexp.MustCompile(`^(#{1,6})\s+(.*)$`)
 	anchorRe    = regexp.MustCompile(`\s*\{#[^}]*\}\s*$`)
-	imageRe     = regexp.MustCompile(`!\[[^\]]*\](?:\[[^\]]*\]|\([^)]*\))`)
+	imageRe     = regexp.MustCompile(` ?!\[[^\]]*\](?:\[[^\]]*\]|\([^)]*\))`)
 	imageDefRe  = regexp.MustCompile(`^\[[^\]]+\]:\s*<data:`)
 	linkRe      = regexp.MustCompile(`\[((?:\\.|[^\]\\])*)\]\([^)]*\)`)
 	inviteRe    = regexp.MustCompile(`(~~)?\[((?:\\.|[^\]\\])*)\]\([^)]*\)(~~)?`)
-	escapeRe    = regexp.MustCompile(`\\([-\[\].()#!+~>])`)
+	escapeRe    = regexp.MustCompile(`\\([-\[\].()#!+~>` + "`" + `$&])`)
+	hardBreakRe = regexp.MustCompile(`(\S) {2,}\n`)
 	dateLineRe  = regexp.MustCompile(`^[A-Z][a-z]{2,8} \d{1,2}, \d{4}$`)
 	boilerplate = []string{
 		"rate the new Quick notes tab",
@@ -35,7 +36,11 @@ var (
 // Transform converts one exported doc. fallbackTitle and fallbackDate are used
 // when the doc lacks a title heading or date line.
 func Transform(doc, fallbackTitle string, fallbackDate time.Time) Result {
-	tabs := splitTabs(strings.Split(strings.ReplaceAll(doc, "\r\n", "\n"), "\n"))
+	doc = strings.ReplaceAll(doc, "\r\n", "\n")
+	// A trailing-space hard break becomes a paragraph break, so "**Lead**  \ntext"
+	// still renders on two lines once trailing spaces are trimmed.
+	doc = hardBreakRe.ReplaceAllString(doc, "$1\n\n")
+	tabs := splitTabs(strings.Split(doc, "\n"))
 	fallbackDateLine := fallbackDate.Format("Jan 2, 2006")
 
 	full, ok := tabs["Full notes"]
