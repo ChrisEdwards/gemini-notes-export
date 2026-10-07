@@ -102,7 +102,7 @@ func Transform(doc, fallbackTitle string, fallbackDate time.Time) Result {
 	head := []string{"## " + title, "", date, "", invited, ""}
 	fullLines := append(append(append(append([]string{}, head...), body...), ""), transcript...)
 	return Result{
-		Summary: render(append(head, section(body, "### Details")...)...),
+		Summary: render(append(append(head, section(body, "### Next steps")...), section(body, "### Details")...)...),
 		Full:    render(fullLines...),
 	}
 }

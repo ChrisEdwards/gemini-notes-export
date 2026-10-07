@@ -39,7 +39,7 @@ For a doc named `Team Sync - 2026/10/06 15:00 EDT - Notes by Gemini`:
 - File name: the Drive name with `/ : < > " | ? *` replaced by `_`, plus `.md`.
 - Date folder: the first `YYYY_MM_DD` in the name (meeting date in the
   organizer's time zone), else the local date of the doc's last modification.
-- Summary: title, date, invitees, and the Details section.
+- Summary: title, date, invitees, then the Next steps (when present) and Details sections.
 - Full: title, date, invitees, every Full notes section (Summary, Decisions,
   Next steps, Details, ...), then the transcript.
 - The Quick notes tab, survey and disclaimer lines, images, links, and markdown

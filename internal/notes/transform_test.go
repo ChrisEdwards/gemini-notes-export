@@ -88,8 +88,9 @@ func TestTransformRules(t *testing.T) {
 			t.Errorf("full contains %q", bad)
 		}
 	}
-	if strings.Contains(r.Summary, "### Summary") || strings.Contains(r.Summary, "### Next steps") || !strings.Contains(r.Summary, "### Details") {
-		t.Errorf("summary should hold only the Details section:\n%s", r.Summary)
+	ns, det := strings.Index(r.Summary, "### Next steps"), strings.Index(r.Summary, "### Details")
+	if strings.Contains(r.Summary, "### Summary") || ns < 0 || det < ns {
+		t.Errorf("summary should hold Next steps then Details:\n%s", r.Summary)
 	}
 	if strings.Contains(r.Summary, "Transcript") {
 		t.Errorf("summary contains transcript:\n%s", r.Summary)
