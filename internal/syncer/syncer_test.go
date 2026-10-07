@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func TestFormatReport(t *testing.T) {
@@ -53,6 +54,24 @@ func TestLock(t *testing.T) {
 	b, _ := os.ReadFile(path)
 	if string(b) != strconv.Itoa(os.Getpid())+"\n" {
 		t.Errorf("lock holds %q", b)
+	}
+	release()
+}
+
+func TestLockUnknownLivenessUsesAge(t *testing.T) {
+	defer func(f func(int) (bool, bool)) { alive = f }(alive)
+	alive = func(int) (bool, bool) { return false, false }
+	path := filepath.Join(t.TempDir(), "lock")
+
+	os.WriteFile(path, []byte("123\n"), 0o600)
+	if _, held, _ := acquireLock(path); !held {
+		t.Error("fresh lock with unknown liveness should be held")
+	}
+	old := time.Now().Add(-2 * staleLockAge)
+	os.Chtimes(path, old, old)
+	release, held, err := acquireLock(path)
+	if err != nil || held {
+		t.Fatalf("old lock should be stale: held=%v err=%v", held, err)
 	}
 	release()
 }

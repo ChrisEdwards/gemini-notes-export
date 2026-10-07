@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/chrisedwards/gemini-notes-export/internal/gog"
@@ -29,6 +28,8 @@ const (
 	overlap  = 10 * time.Minute
 	docMime  = "application/vnd.google-apps.document"
 	nameTail = "Notes by Gemini"
+	// staleLockAge applies where alive can't check the PID (Windows).
+	staleLockAge = time.Hour
 )
 
 // Options are the inputs for one sync, already merged from flags, env, and config.
@@ -246,23 +247,16 @@ func acquireLock(path string) (release func(), held bool, err error) {
 			return nil, false, err
 		}
 		b, _ := os.ReadFile(path) // #nosec G304 -- path under the user's output dir
-		if pid, _ := strconv.Atoi(strings.TrimSpace(string(b))); alive(pid) {
+		pid, _ := strconv.Atoi(strings.TrimSpace(string(b)))
+		live, known := alive(pid)
+		if !known { // can't check the PID here: trust a lock younger than staleLockAge
+			fi, err := os.Stat(path)
+			live = err == nil && time.Since(fi.ModTime()) < staleLockAge
+		}
+		if live {
 			return nil, true, nil
 		}
 		os.Remove(path)
 	}
 	return nil, false, fmt.Errorf("could not acquire lock %s", path)
-}
-
-// ponytail: Signal(0) liveness is Unix-only; on Windows every lock looks stale.
-func alive(pid int) bool {
-	if pid <= 0 {
-		return false
-	}
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	err = p.Signal(syscall.Signal(0))
-	return err == nil || errors.Is(err, syscall.EPERM)
 }
