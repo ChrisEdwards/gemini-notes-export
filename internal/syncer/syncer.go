@@ -31,7 +31,7 @@ const (
 	nameTail = "Notes by Gemini"
 )
 
-// Options are the inputs for one sync. Flags today; a config file can fill the same struct later.
+// Options are the inputs for one sync, already merged from flags, env, and config.
 type Options struct {
 	OutputDir string
 	Since     time.Time // zero means "use the cursor"
