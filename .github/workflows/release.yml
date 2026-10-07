@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  # Bundled gog release (github.com/openclaw/gogcli). Bump here only.
+  GOG_VERSION: 0.43.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { goos: darwin, goarch: arm64, ext: "" }
+          - { goos: darwin, goarch: amd64, ext: "" }
+          - { goos: linux, goarch: amd64, ext: "" }
+          - { goos: linux, goarch: arm64, ext: "" }
+          - { goos: windows, goarch: amd64, ext: ".exe" }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build gemini-notes-export
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          build="${GITHUB_SHA::7}"
+          buildtime="$(date -u '+%Y-%m-%d_%H:%M:%S')"
+          go build -trimpath \
+            -ldflags "-s -w -X main.Version=${version} -X main.Build=${build} -X main.BuildTime=${buildtime}" \
+            -o "dist/gemini-notes-export${{ matrix.ext }}" ./cmd/gemini-notes-export
+
+      - name: Download and verify gog
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          set -eu
+          if [ "$GOOS" = windows ]; then gext=zip; else gext=tar.gz; fi
+          asset="gogcli_${GOG_VERSION}_${GOOS}_${GOARCH}.${gext}"
+          base="https://github.com/openclaw/gogcli/releases/download/v${GOG_VERSION}"
+          mkdir -p gogdl
+          cd gogdl
+          curl -fsSLO "${base}/${asset}"
+          curl -fsSLO "${base}/checksums.txt"
+          grep "  ${asset}\$" checksums.txt | sha256sum -c -
+          # Archives hold the binary at the root: ./gog in tar.gz, gog.exe in zip.
+          if [ "$gext" = zip ]; then unzip -q "$asset" gog.exe; else tar -xzf "$asset" ./gog; fi
+          mv "gog${EXT}" ../dist/
+          curl -fsSL "https://raw.githubusercontent.com/openclaw/gogcli/v${GOG_VERSION}/LICENSE" -o ../dist/LICENSE-gogcli
+          cp ../LICENSE ../dist/LICENSE
+
+      - name: Create archive (Unix)
+        if: matrix.goos != 'windows'
+        run: |
+          cd dist
+          tar -czvf "gemini-notes-export-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" \
+            gemini-notes-export gog LICENSE LICENSE-gogcli
+
+      - name: Create archive (Windows)
+        if: matrix.goos == 'windows'
+        run: |
+          cd dist
+          zip "gemini-notes-export-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}.zip" \
+            gemini-notes-export.exe gog.exe LICENSE LICENSE-gogcli
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gemini-notes-export-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/gemini-notes-export-*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        run: cd artifacts && sha256sum gemini-notes-export-* > checksums.txt && cat checksums.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
