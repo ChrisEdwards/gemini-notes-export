@@ -16,6 +16,12 @@ linters:
         - (*os.File).Close
         - os.Remove
         - os.RemoveAll
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    gosec:
+      excludes:
+        - G104 # unhandled errors; errcheck covers this with its exclude list
     misspell:
       locale: US
 issues:

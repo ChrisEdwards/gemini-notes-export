@@ -119,6 +119,9 @@ func splitTabs(lines []string) map[string][]string {
 					cur = name
 				}
 			}
+			if strings.HasSuffix(l, " Notes") { // short meetings: a single "📝 Notes" tab
+				cur = "Full notes"
+			}
 			continue
 		}
 		tabs[cur] = append(tabs[cur], l)

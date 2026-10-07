@@ -102,7 +102,7 @@ func (c *Client) run(ctx context.Context, args ...string) ([]byte, error) {
 			return out, err
 		}
 		delay := baseDelay << (attempt - 1)
-		delay += time.Duration(rand.Int64N(int64(delay)))
+		delay += time.Duration(rand.Int64N(int64(delay))) // #nosec G404 -- retry jitter, not security
 		fmt.Fprintf(c.Log, "gog: transport error (attempt %d/%d), retrying in %s\n", attempt, maxAttempts, delay.Round(100*time.Millisecond))
 		select {
 		case <-ctx.Done():

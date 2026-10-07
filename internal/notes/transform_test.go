@@ -19,6 +19,7 @@ func TestTransformGolden(t *testing.T) {
 	}{
 		{"quicknotes", false},
 		{"decisions", false},
+		{"notes-tab", false},
 		{"no-full-notes", true},
 	}
 	for _, tt := range tests {
